@@ -6146,6 +6146,10 @@ EXPORT dwg_class *dwg_get_class (const dwg_data *dwg, unsigned int index);
 EXPORT Dwg_Data *dwg_add_Document (const Dwg_Version_Type version,
                                    const int imperial, const int loglevel);
 
+/* Convert UTF-8 strings to BITCODE_T fields. Returns a copy of the string. */
+EXPORT BITCODE_T dwg_add_u8_input (Dwg_Data *restrict dwg,
+                                   const char *restrict u8str) __nonnull_all;
+
 /* no proxy, no is_zombie */
 /* returns -1 on error, 0 on success */
 EXPORT int
@@ -6634,9 +6638,8 @@ dwg_add_TABLE (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
                const double col_width) __nonnull_all;
 */
 
-/* Tables.
-   The names are really BITCODE_T, but we dont support writing TU yet.
-   TODO: take utf8 and convert to TU if needed (dxf).
+/* Tables:
+   The names are all accepted as UTF-8 only.
    On NULL names just create the CONTROL object/resp. NOD entry.
  */
 Dwg_Object_BLOCK_CONTROL*
