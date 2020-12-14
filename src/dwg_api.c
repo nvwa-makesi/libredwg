@@ -25388,7 +25388,10 @@ dwg_add_PROXY_OBJECT (Dwg_Data *restrict dwg, char *name, char *key
 // ACMECOMMANDHISTORY
 // ACMESCOPE
 // ACMESTATEMGR
+
 // ACSH_BOOLEAN_CLASS
+// Performs a Boolean operation (0 union, 1 intersect, or 2 subtract) between the
+// object and another 3DSolid or Region object
 
 Dwg_Object_EVALUATION_GRAPH *
 dwg_add_EVALUATION_GRAPH (Dwg_Data *restrict dwg, const int has_graph,
@@ -25972,7 +25975,7 @@ dwg_add_ACSH_CHAMFER_CLASS (Dwg_Object_EVALUATION_GRAPH *restrict evalgraph,
   }
 }
 
-// ACSH_CHAMFER_CLASS
+#if 0
 EXPORT Dwg_Entity_3DSOLID*
 dwg_add_CHAMFER (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
                  const dwg_point_3d *restrict origin_pt, const dwg_point_3d *restrict normal,
@@ -26023,6 +26026,7 @@ dwg_add_CHAMFER (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
       "face $5 -1 $-1 $-1 $-1 $3 $-1 $6 forward single #\n"
       "color-adesk-attrib $-1 -1 $-1 $-1 $4 256 #\n"
       "End-of-ACIS-data\n";
+    //FIXME
     dwg_geom_normal_to_matrix9 (normal, &matrix);
     snprintf (acis_data, 1048, base_acis_format,
               date_size, date,
@@ -26046,6 +26050,7 @@ dwg_add_CHAMFER (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
     return solid;
   }
 }
+#endif
 
 Dwg_Object_ACSH_CONE_CLASS*
 dwg_add_ACSH_CONE_CLASS (Dwg_Object_EVALUATION_GRAPH *restrict evalgraph,
