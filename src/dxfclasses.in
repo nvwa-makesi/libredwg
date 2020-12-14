@@ -111,6 +111,12 @@ PLOTSETTINGS,		"AcDbPlotSettings",	ODBX,	0
 ACDBSECTIONVIEWSTYLE,	"AcDbSectionViewStyle",	ODBX,	0
 ACDBDETAILVIEWSTYLE,	"AcDbDetailViewStyle",	ODBX,	0
 ACAD_EVALUATION_GRAPH,	"AcDbEvalGraph",	ODBX,	0
+PDFUNDERLAY,		"AcDbPdfReference",	ODBX,	1
+PDFDEFINITION,		"AcDbPdfDefinition",	ODBX,	0
+DGNUNDERLAY,		"AcDbDgnReference",	ODBX,	1
+DGNDEFINITION,		"AcDbDgnDefinition",	ODBX,	0
+DWFUNDERLAY,		"AcDbDwfReference",	ODBX,	1
+DWFDEFINITION,		"AcDbDwfDefinition",	ODBX,	0
 #
 ACSH_BOOLEAN_CLASS,	"AcDbShBoolean",	ODBX,	0
 ACSH_BOX_CLASS,		"AcDbShBox",		ODBX,	0
@@ -188,7 +194,7 @@ ACDB_TEXTOBJECTCONTEXTDATA_CLASS,	"AcDbTextObjectContextData",		ODBX,	0
 %%
 
 /* Create classes on demand.
-   Returns 1 if already in CLASSES, 0 if successfully added, -1 on error.
+   Returns found or new klass->id, -1 on error.
 */
 EXPORT int
 dwg_require_class (Dwg_Data *restrict dwg, const char *const restrict dxfname, const int len)
@@ -198,7 +204,7 @@ dwg_require_class (Dwg_Data *restrict dwg, const char *const restrict dxfname, c
     {
       Dwg_Class *klass = &dwg->dwg_class[i];
       if (strEQ (klass->dxfname, dxfname))
-        return 1;
+        return klass->number;
     }
 
   result = in_word_set (dxfname, len);
@@ -252,6 +258,7 @@ dwg_require_class (Dwg_Data *restrict dwg, const char *const restrict dxfname, c
           fprintf (stderr, "dxfclass_require: Invalid apptype %d", (int)result->apptype);
           return -1;
         }
+      return 500 + dwg->num_classes - 1;
     }
   return -1;
 }

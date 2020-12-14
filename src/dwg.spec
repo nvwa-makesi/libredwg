@@ -6802,7 +6802,6 @@ DWG_OBJECT_END
 // In C++ as UNDERLAYREFERENCE. A bit better than WIPEOUT.
 // no DWF, DGN coverage yet
 DWG_ENTITY (UNDERLAY)
-  //DECODE_UNKNOWN_BITS
   SUBCLASS (AcDbUnderlayReference)
   FIELD_HANDLE (definition_id, 5, 340);
   FIELD_3BD (extrusion, 0);
@@ -6831,6 +6830,7 @@ DWG_ENTITY (UNDERLAY)
       FIELD_2RD_VECTOR (clip_inverts, num_clip_inverts, 12);
     }
   COMMON_ENTITY_HANDLE_DATA;
+  //SUBCLASS (AcDbPdfReference)
 DWG_ENTITY_END
 
 DWG_ENTITY (CAMERA) // i.e. a named view, not persistent in a DWG. CAMERADISPLAY=1

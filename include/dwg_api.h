@@ -6482,7 +6482,13 @@ dwg_add_LARGE_RADIAL_DIMENSION (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
                                 const double leader_len) __nonnull_all;
 EXPORT Dwg_Entity_UNDERLAY*
 dwg_add_UNDERLAY (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
-                  const dwg_point_3d *restrict ins_pt) __nonnull_all;
+                  const char* filename,
+                  const dwg_point_2d *restrict ins_pt,
+                  const dwg_point_2d *restrict scale_vec, /* maybe NULL */
+                  const double rotation,
+                  unsigned num_clip_verts,
+                  const dwg_point_2d *restrict clip_verts /* maybe NULL */)
+  __nonnull ((1,2));
 
 /* All the ACSH methods and 3d primitives are still experimental.
    They do not work yet properly */
@@ -6903,7 +6909,7 @@ dwg_add_SPATIAL_INDEX (Dwg_Data *restrict dwg /* ... */) __nonnull_all;
 #define HAVE_NO_DWG_ADD_TEXTOBJECTCONTEXTDATA
 #define HAVE_NO_DWG_ADD_TVDEVICEPROPERTIES
 #define HAVE_NO_DWG_ADD_UCS_CONTROL
-#define HAVE_NO_DWG_ADD_UNDERLAYDEFINITION
+#define HAVE_DWG_ADD_UNDERLAYDEFINITION
 #define HAVE_NO_DWG_ADD_UNKNOWN_ENT
 #define HAVE_NO_DWG_ADD_UNKNOWN_OBJ
 #define HAVE_NO_DWG_ADD_VERTEX_2D

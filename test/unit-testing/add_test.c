@@ -11,7 +11,7 @@
 /*  along with this program.  If not, see <http://www.gnu.org/licenses/>.    */
 /*****************************************************************************/
 
-/* test the dwg_add API for properly written DWG files */
+/* Test the dwg_add API for properly written DWG files */
 /* written by: Reini Urban */
 
 #define ADD_TEST_C
@@ -32,6 +32,14 @@ static int cnt = 0;
 #include "dwg_api.h"
 #include "tests_common.h"
 #include "classes.h"
+
+enum _temp_complex_types {
+  TEMP_ELLIPTICAL_CONE = 4000,
+  TEMP_ELLIPTICAL_CYLINDER,
+  TEMP_EXTRUDED_SOLID,
+  TEMP_EXTRUDED_PATH,
+  TEMP_REVOLVED_SOLID,
+};
 
 static unsigned char* hex2bin (const char *hex)
 {
@@ -54,6 +62,7 @@ test_add (const Dwg_Object_Type type, const char *restrict dwgfile)
   Dwg_Data *dwg;
   Dwg_Object *mspace;
   Dwg_Object_Ref *mspace_ref;
+  dwg_point_2d pt2d = {1.5, 2.5};
   dwg_point_3d pt1 = {1.5, 2.5, 0.2};
   dwg_point_3d pt2 = {2.5, 1.5, 0.0};
   Dwg_Object_BLOCK_HEADER *hdr;
@@ -636,6 +645,9 @@ test_add (const Dwg_Object_Type type, const char *restrict dwgfile)
           fail ("no VIEWPORT created");
       }
       break;
+    case DWG_TYPE_UNDERLAY:
+      dwg_add_UNDERLAY (hdr, "test.pdf", &pt2d, NULL, 0.0, 0, NULL);
+      break;
     case DWG_TYPE_ACSH_TORUS_CLASS:
       {
         const dwg_point_3d pt = { 1383.62, 418.5, 1158.76 };
@@ -672,6 +684,34 @@ test_add (const Dwg_Object_Type type, const char *restrict dwgfile)
         dwg_add_BOX (hdr, &pt, NULL, 4.416106, 2.044413, 2.543320);
       }
       break;
+    case DWG_TYPE_ACSH_PYRAMID_CLASS:
+      {
+        const dwg_point_3d pt = { 7.791946, 11.0222066, 1.271660 };
+        dwg_add_PYRAMID (hdr, &pt, NULL, 4.5, 4, 2.0, 2.5);
+      }
+      break;
+    case DWG_TYPE_ACSH_CHAMFER_CLASS:
+      {
+        const dwg_point_3d pt = { 7.791946, 11.0222066, 1.271660 };
+        const int32_t edges[] = { 151 };
+        //?? normally you chamfer an existing 3dsolid
+        //dwg_add_CHAMFER (hdr, &pt, NULL, 1, 10.0, 10.0, 1, edges, 152);
+      }
+      break;
+    case DWG_TYPE_ACSH_FILLET_CLASS:
+    case TEMP_ELLIPTICAL_CONE:
+    case TEMP_ELLIPTICAL_CYLINDER:
+    case TEMP_EXTRUDED_SOLID:
+    case TEMP_EXTRUDED_PATH:
+    case TEMP_REVOLVED_SOLID:
+    case DWG_TYPE_TABLE:
+    case DWG_TYPE_TABLECONTENT:
+    case DWG_TYPE_TABLEGEOMETRY:
+    case DWG_TYPE_TABLESTYLE:
+    case DWG_TYPE_LAYERFILTER:
+    case DWG_TYPE_LAYER_INDEX:
+    case DWG_TYPE_SPATIAL_FILTER:
+    case DWG_TYPE_SPATIAL_INDEX:
 
     default:
       fail ("No add method yet type %s", name);
@@ -790,12 +830,26 @@ test_add (const Dwg_Object_Type type, const char *restrict dwgfile)
       TEST_OBJECT (XRECORD);
       TEST_OBJECT (VBA_PROJECT);
       TEST_OBJECT (LAYOUT);
+      TEST_ENTITY (UNDERLAY);
       TEST_OBJECT (ACSH_TORUS_CLASS);
       TEST_OBJECT (ACSH_SPHERE_CLASS);
       TEST_OBJECT (ACSH_CYLINDER_CLASS);
       TEST_OBJECT (ACSH_CONE_CLASS);
       TEST_OBJECT (ACSH_WEDGE_CLASS);
       TEST_OBJECT (ACSH_BOX_CLASS);
+      //TEST_OBJECT (ACSH_PYRAMID_CLASS);
+      //TEST_OBJECT (ACSH_CHAMFER_CLASS);
+      //TEST_OBJECT (ACSH_FILLET_CLASS);
+    case TEMP_ELLIPTICAL_CONE:
+    case TEMP_ELLIPTICAL_CYLINDER:
+    case TEMP_EXTRUDED_SOLID:
+    case TEMP_EXTRUDED_PATH:
+    case TEMP_REVOLVED_SOLID:
+    //TEST_OBJECT (TABLE);
+    //TEST_OBJECT (TABLECONTENT);
+    //TEST_OBJECT (TABLEGEOMETRY);
+    //TEST_OBJECT (TABLESTYLE);
+
     default:
       fail ("No test yet for type %s", name);
     }
@@ -873,6 +927,7 @@ main (int argc, char *argv[])
   error = test_add (DWG_TYPE_XRECORD, "add_xrecord_2000.dwg");
   error = test_add (DWG_TYPE_VBA_PROJECT, "add_vba_2000.dwg");
   error = test_add (DWG_TYPE_LAYOUT, "add_layout_2000.dwg");
+  error = test_add (DWG_TYPE_UNDERLAY, "add_underlay_2000.dwg");
   error = test_add (DWG_TYPE_ACSH_TORUS_CLASS, "add_torus_2000.dwg");
   error = test_add (DWG_TYPE_ACSH_SPHERE_CLASS, "add_sphere_2000.dwg");
   error = test_add (DWG_TYPE_ACSH_CYLINDER_CLASS, "add_cylinder_2000.dwg");

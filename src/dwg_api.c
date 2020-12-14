@@ -18,15 +18,21 @@
  */
 
 #include "config.h"
-#ifdef HAVE_SINCOS
-#  define _GNU_SOURCE
-#endif
+#define _GNU_SOURCE
+#include <string.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <math.h>
 #include <time.h>
 #include <assert.h>
+// strings.h or string.h
+#ifdef AX_STRCASECMP_HEADER
+#  include AX_STRCASECMP_HEADER
+#endif
+#if defined(HAVE_BASENAME) && defined(HAVE_LIBGEN_H)
+#  include <libgen.h> // POSIX basename
+#endif
 
 #ifdef HAVE_MALLOC_H
 #  include <malloc.h>
@@ -22482,8 +22488,7 @@ dwg_add_Document (const Dwg_Version_Type version, const int imperial, const int 
   return dwg;
 }
 
-/* Returns -1 on error, 0 on success.
-   Takes ASCII strings only */
+/* Returns -1 on error, 50x klass id on success. */
 EXPORT int
 dwg_add_class (Dwg_Data *restrict dwg, const char *const restrict dxfname,
                const char *const restrict cppname,
@@ -22510,11 +22515,11 @@ dwg_add_class (Dwg_Data *restrict dwg, const char *const restrict dxfname,
   klass->cppname = strdup (cppname);
   klass->item_class_id = is_entity ? 0x1f2: 0x1f3;
   dwg->num_classes++;
-  return 0;
+  return klass->number;
 }
 
 /* Now implemented in dxfclasses.c as gperf lookup */
-#define REQUIRE_CLASS(name) dwg_require_class (dwg, name, sizeof(name)-1)
+#define REQUIRE_CLASS(name) dwg_require_class (dwg, ""name, sizeof(name)-1)
 
 #define NEW_ENTITY(dwg, obj)                                                  \
   {                                                                           \
@@ -26997,6 +27002,153 @@ dwg_add_IMAGE (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
   return _img;
 }
 
+EXPORT Dwg_Entity_UNDERLAY *
+dwg_add_UNDERLAY (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
+                  const char* filename,
+                  const dwg_point_2d *restrict ins_pt,
+                  const dwg_point_2d *restrict scale_vec, /* maybe NULL */
+                  const double rotation,
+                  unsigned num_clip_verts,
+                  const dwg_point_2d *restrict clip_verts /* maybe NULL */)
+{
+  int err;
+  Dwg_Object *hdr = dwg_obj_generic_to_object (blkhdr, &err);
+  Dwg_Data *dwg = hdr ? hdr->parent : NULL;
+  Dwg_Object *img;
+  Dwg_Entity_UNDERLAY *_img;
+  Dwg_Object_DICTIONARY *dict;
+  Dwg_Object *imgdef, *dictobj;
+  Dwg_Object_Ref *dictref, *ref;
+  int def_type, und_type;
+  char base[128];
+  char type[4];
+  const char *def_dxfname, *nodkey, *und_dxfname;
+  const char orig_filename[1024];
+  char name[128];
+  static int underlay_counter = 1;
+
+  strncpy ((char*)orig_filename, filename, 1023);
+  {
+    char ext[12];
+    char cnt[12];
+    char *p = basename ((char*)filename); // The bad POSIX variant, modifying its argument
+    if (p && *p)
+      strcpy (base, p);
+    else
+      strcpy (base, "pdf");
+
+    // check extension, default: pdf
+    p = strrchr (base, '.');
+    if (p && p[1])
+      {
+        strncpy (ext, &p[1], 11);
+        ext[11] = '\0';
+        *p = '\0'; // strip ext from base
+      }
+    else
+      strcpy (ext, "PDF");
+    if (strcasecmp (ext, "DGN") == 0)
+      {
+        strcpy (type, "DGN");
+        nodkey = "ACAD_DGNDEFINITIONS";
+        und_dxfname = "DGNUNDERLAY";
+        def_dxfname = "DEFDEFINITION";
+      }
+    else if (strcasecmp (ext, "DWF") == 0)
+      {
+        strcpy (type, "DWF");
+        nodkey = "ACAD_DWFDEFINITIONS";
+        und_dxfname = "DWFUNDERLAY";
+        def_dxfname = "DWFDEFINITION";
+      }
+    else
+      {
+        strcpy (type, "PDF");
+        nodkey = "ACAD_PDFDEFINITIONS";
+        und_dxfname = "PDFUNDERLAY";
+        def_dxfname = "PDFDEFINITION";
+      }
+
+    snprintf (cnt, 12, "%d", underlay_counter);
+    strncpy (name, base, 110);
+    strcat (name, " - ");
+    strncat (name, cnt, 12);
+  }
+  {
+    def_type = dwg_require_class (dwg, def_dxfname, strlen (def_dxfname));
+    und_type = dwg_require_class (dwg, und_dxfname, strlen (und_dxfname));
+    dict = dwg_add_DICTIONARY (dwg, (const BITCODE_T) nodkey, NULL, 0);
+    dictobj = dwg_obj_generic_to_object (dict, &err);
+    dictref = dwg_add_handleref (dwg, 4, dictobj->handle.value, NULL);
+  }
+  // check for existing DEFINITION before creating a new one
+  if ((ref = dwg_find_dicthandle (dwg, dictref, name)))
+    {
+      imgdef = dwg_resolve_handle (dwg, ref->absolute_ref);
+      add_obj_reactor (imgdef->tio.object, dictobj->handle.value);
+    }
+  else
+    {
+      API_ADD_OBJECT (UNDERLAYDEFINITION);
+      underlay_counter++;
+      obj->dxfname = (char*)def_dxfname;
+      obj->type = def_type;
+      _obj->filename = strdup (orig_filename);
+      _obj->name = strdup (name);
+      dwg_add_DICTIONARY_item (dict, name, obj->handle.value);
+      obj->tio.object->ownerhandle = dictref;
+      add_obj_reactor (obj->tio.object, dictobj->handle.value);
+      imgdef = obj;
+    }
+  {
+    GCC46_DIAG_IGNORE (-Wshadow)
+    API_ADD_ENTITY (UNDERLAY);
+    GCC46_DIAG_RESTORE
+    obj->dxfname = (char*)und_dxfname;
+    obj->type = und_type;
+    ADD_CHECK_2DPOINT (ins_pt);
+    _obj->definition_id = dwg_add_handleref (dwg, 5, imgdef->handle.value, obj);
+    _obj->ins_pt.x = ins_pt->x;
+    _obj->ins_pt.y = ins_pt->y;
+    _obj->ins_pt.z = 0;
+    if (scale_vec)
+      {
+        ADD_CHECK_2DPOINT (scale_vec);
+        _obj->scale.x = scale_vec->x;
+        _obj->scale.y = scale_vec->y;
+      }
+    else
+      {
+        _obj->scale.x = 1.0;
+        _obj->scale.y = 1.0;
+      }
+    _obj->angle = rotation;
+    ADD_CHECK_ANGLE (_obj->angle);
+    if (num_clip_verts > 1000)
+      {
+        LOG_ERROR ("Invalid %s.num_clip_verts %u", und_dxfname, num_clip_verts)
+        return NULL;
+      }
+    _obj->clip_verts = calloc (num_clip_verts, sizeof (BITCODE_2RD));
+    _obj->num_clip_verts = num_clip_verts;
+    for (unsigned i=0; i < num_clip_verts; i++)
+      {
+        ADD_CHECK_DOUBLE (clip_verts[i].x);
+        ADD_CHECK_DOUBLE (clip_verts[i].y);
+        _obj->clip_verts[i].x = clip_verts[i].x;
+        _obj->clip_verts[i].y = clip_verts[i].y;
+      }
+    // defaults:
+    // flag, fade?
+    _obj->extrusion.z = 1.0;
+    _obj->scale.z = 1.0;
+    _obj->contrast = 100;
+    return _obj;
+  }
+}
+
+// UNDERLAYDEFINITION
+
 // INDEX
 
 EXPORT Dwg_Entity_LARGE_RADIAL_DIMENSION *
@@ -27175,23 +27327,6 @@ dwg_add_SPATIAL_INDEX (Dwg_Data *restrict dwg /* ... */)
 // TEXTOBJECTCONTEXTDATA
 // TVDEVICEPROPERTIES
 
-EXPORT Dwg_Entity_UNDERLAY *
-dwg_add_UNDERLAY (Dwg_Object_BLOCK_HEADER *restrict blkhdr,
-                  const dwg_point_3d *restrict ins_pt)
-{
-  API_ADD_ENTITY (UNDERLAY);
-  _obj->ins_pt.x = ins_pt->x;
-  _obj->ins_pt.y = ins_pt->y;
-  _obj->ins_pt.z = ins_pt->z;
-  // defaults:
-  _obj->scale.x = 1.0;
-  _obj->scale.y = 1.0;
-  _obj->scale.z = 1.0;
-  // TODO UNDERLAYDEFINITION
-  return _obj;
-}
-
-// UNDERLAYDEFINITION
 // VISIBILITYGRIPENTITY
 // VISIBILITYPARAMETERENTITY
 // VISUALSTYLE
